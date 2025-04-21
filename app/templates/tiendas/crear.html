@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Tienda - TiendasGeo{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Crear Nueva Tienda</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre de la tienda *</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="direccion" class="form-label">Dirección *</label>
+                                <input type="text" class="form-control" id="direccion" name="direccion" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="categorias" class="form-label">Categorías</label>
+                                <input type="text" class="form-control" id="categorias" name="categorias" placeholder="Ej: Electrónica, Hogar, Jardín (separadas por comas)">
+                                <div class="form-text">Introduce las categorías separadas por comas</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="telefono" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="telefono" name="telefono">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="sitio_web" class="form-label">Sitio web</label>
+                                <input type="url" class="form-control" id="sitio_web" name="sitio_web" placeholder="https://">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="horario" class="form-label">Horario</label>
+                                <textarea class="form-control" id="horario" name="horario" rows="2" placeholder="Ej: Lun-Vie: 9:00-20:00, Sáb: 10:00-14:00"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="form-label">Ubicación *</label>
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="buscar_ubicacion" placeholder="Buscar dirección...">
+                                <button class="btn btn-outline-secondary" type="button" id="btn_buscar_ubicacion">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="latitud" class="form-label">Latitud *</label>
+                                    <input type="number" step="any" class="form-control" id="latitud" name="latitud" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="longitud" class="form-label">Longitud *</label>
+                                    <input type="number" step="any" class="form-control" id="longitud" name="longitud" required>
+                                </div>
+                            </div>
+                            <div id="map"></div>
+                            <div class="form-text text-muted mt-2">
+                                Haz clic en el mapa para seleccionar la ubicación exacta de tu tienda
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('tiendas.listar_tiendas') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Guardar Tienda
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales
+    let map;
+    let marker;
+    
+    // Inicializar mapa
+    function initMap() {
+        // Crear mapa centrado en España
+        map = L.map('map').setView([40.416775, -3.703790], 6);
+        
+        // Añadir capa de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Evento de clic en el mapa
+        map.on('click', function(e) {
+            setMarker(e.latlng.lat, e.latlng.lng);
+        });
+        
+        // Configurar búsqueda de ubicación
+        document.getElementById('btn_buscar_ubicacion').addEventListener('click', buscarUbicacion);
+        document.getElementById('buscar_ubicacion').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                buscarUbicacion();
+            }
+        });
+        
+        // Obtener ubicación del usuario
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Actualizar mapa
+                    map.setView([lat, lng], 14);
+                },
+                function(error) {
+                    console.error('Error al obtener ubicación:', error);
+                }
+            );
+        }
+    }
+    
+    // Establecer marcador en el mapa
+    function setMarker(lat, lng) {
+        // Actualizar campos de formulario
+        document.getElementById('latitud').value = lat;
+        document.getElementById('longitud').value = lng;
+        
+        // Actualizar o crear marcador
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(map);
+            
+            // Evento de arrastre del marcador
+            marker.on('dragend', function() {
+                const position = marker.getLatLng();
+                setMarker(position.lat, position.lng);
+            });
+        }
+    }
+    
+    // Buscar ubicación por dirección
+    function buscarUbicacion() {
+        const direccion = document.getElementById('buscar_ubicacion').value.trim();
+        
+        if (direccion === '') {
+            return;
+        }
+        
+        // Usar Nominatim para geocodificación
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const result = data[0];
+                    const lat = parseFloat(result.lat);
+                    const lng = parseFloat(result.lon);
+                    
+                    // Actualizar mapa y marcador
+                    map.setView([lat, lng], 16);
+                    setMarker(lat, lng);
+                    
+                    // Actualizar campo de dirección si está vacío
+                    if (document.getElementById('direccion').value === '') {
+                        document.getElementById('direccion').value = result.display_name;
+                    }
+                } else {
+                    alert('No se encontró la ubicación. Intenta con otra dirección.');
+                }
+            })
+            .catch(error => {
+                console.error('Error al buscar ubicación:', error);
+                alert('Error al buscar la ubicación. Inténtalo de nuevo.');
+            });
+    }
+    
+    // Inicializar cuando el documento esté listo
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

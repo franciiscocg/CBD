@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app/static/uploads:/app/app/static/uploads
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/tiendas_geo_db
+      - SECRET_KEY=clave-secreta-super-segura-para-produccion
+      - DEBUG=False
+    depends_on:
+      - mongo
+    restart: always
+
+  mongo:
+    image: mongo:4.4
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+volumes:
+  mongo_data:

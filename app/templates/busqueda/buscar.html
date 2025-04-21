@@ -1,0 +1,427 @@
+{% extends 'base.html' %}
+
+{% block title %}Buscar Productos Cercanos - TiendasGeo{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    .producto-card {
+        transition: transform 0.3s;
+    }
+    .producto-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .search-container {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Buscar Productos Cercanos</h1>
+        
+        <div class="search-container">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="input-group mb-3">
+                        <input type="text" id="search-input" class="form-control form-control-lg" placeholder="¿Qué producto estás buscando?">
+                        <button class="btn btn-primary" type="button" id="search-button">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Radio</span>
+                        <select class="form-select" id="radio-select">
+                            <option value="1">1 km</option>
+                            <option value="2">2 km</option>
+                            <option value="5" selected>5 km</option>
+                            <option value="10">10 km</option>
+                            <option value="20">20 km</option>
+                        </select>
+                        <button class="btn btn-outline-primary" type="button" id="location-button">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info" id="location-status" style="display: none;">
+                <i class="fas fa-spinner fa-spin me-2"></i> Obteniendo tu ubicación...
+            </div>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="mt-4">
+            <h2>Resultados</h2>
+            <div id="results-container" class="row mt-3">
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">Busca productos para ver resultados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales
+    let map;
+    let userMarker;
+    let markers = [];
+    let userLocation = null;
+    
+    // Inicializar mapa
+    function initMap() {
+        // Crear mapa centrado en España
+        map = L.map('map').setView([40.416775, -3.703790], 6);
+        
+        // Añadir capa de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Obtener ubicación del usuario
+        document.getElementById('location-button').addEventListener('click', getUserLocation);
+        
+        // Configurar búsqueda
+        document.getElementById('search-button').addEventListener('click', searchProducts);
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchProducts();
+            }
+        });
+    }
+    
+    // Obtener ubicación del usuario
+    function getUserLocation() {
+        const statusElement = document.getElementById('location-status');
+        statusElement.style.display = 'block';
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    // Actualizar mapa
+                    map.setView([userLocation.lat, userLocation.lng], 14);
+                    
+                    // Añadir marcador de usuario
+                    if (userMarker) {
+                        userMarker.setLatLng([userLocation.lat, userLocation.lng]);
+                    } else {
+                        const userIcon = L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34]
+                        });
+                        
+                        userMarker = L.marker([userLocation.lat, userLocation.lng], {
+                            icon: userIcon,
+                            title: 'Tu ubicación'
+                        }).addTo(map);
+                        
+                        userMarker.bindPopup('Tu ubicación actual').openPopup();
+                    }
+                    
+                    statusElement.style.display = 'none';
+                    
+                    // Si hay un término de búsqueda, buscar productos cercanos
+                    const searchInput = document.getElementById('search-input');
+                    if (searchInput.value.trim() !== '') {
+                        searchProducts();
+                    }
+                },
+                function(error) {
+                    statusElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error al obtener tu ubicación: ${error.message}`;
+                    statusElement.classList.remove('alert-info');
+                    statusElement.classList.add('alert-danger');
+                }
+            );
+        } else {
+            statusElement.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> Tu navegador no soporta geolocalización';
+            statusElement.classList.remove('alert-info');
+            statusElement.classList.add('alert-danger');
+        }
+    }
+    
+    // Buscar productos
+    function searchProducts() {
+        const searchInput = document.getElementById('search-input');
+        const radioSelect = document.getElementById('radio-select');
+        const resultsContainer = document.getElementById('results-container');
+        
+        const termino = searchInput.value.trim();
+        const radio = radioSelect.value;
+        
+        if (termino === '') {
+            return;
+        }
+        
+        // Limpiar marcadores anteriores
+        clearMarkers();
+        
+        // Mostrar cargando
+        resultsContainer.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2">Buscando productos...</p>
+            </div>
+        `;
+        
+        // Si tenemos ubicación del usuario, buscar productos cercanos
+        if (userLocation) {
+            fetch(`/api/buscar/producto-cercano?termino=${encodeURIComponent(termino)}&lat=${userLocation.lat}&lng=${userLocation.lng}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        resultsContainer.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <p class="text-muted">${data.error}</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Mostrar tienda en el mapa
+                    const tienda = data.tienda;
+                    const tiendaIcon = L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34]
+                    });
+                    
+                    const marker = L.marker([tienda.latitud, tienda.longitud], {
+                        icon: tiendaIcon,
+                        title: tienda.nombre
+                    }).addTo(map);
+                    
+                    marker.bindPopup(`
+                        <strong>${tienda.nombre}</strong><br>
+                        ${tienda.direccion}<br>
+                        <strong>Distancia:</strong> ${tienda.distancia} km
+                    `);
+                    
+                    markers.push(marker);
+                    
+                    // Ajustar vista del mapa para mostrar usuario y tienda
+                    const bounds = L.latLngBounds(
+                        L.latLng(userLocation.lat, userLocation.lng),
+                        L.latLng(tienda.latitud, tienda.longitud)
+                    );
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                    
+                    // Mostrar resultados
+                    let resultsHTML = '';
+                    
+                    resultsHTML += `
+                        <div class="col-12 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Tienda más cercana con "${termino}"</h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">${tienda.nombre}</h6>
+                                    <p class="card-text">
+                                        <i class="fas fa-map-marker-alt me-2"></i>${tienda.direccion}<br>
+                                        <i class="fas fa-route me-2"></i>Distancia: ${tienda.distancia} km
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Mostrar productos
+                    resultsHTML += '<div class="col-12"><h3>Productos disponibles</h3></div>';
+                    
+                    data.productos.forEach(producto => {
+                        resultsHTML += `
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100 producto-card">
+                                    ${producto.imagen ? `<img src="${producto.imagen}" class="card-img-top" alt="${producto.nombre}">` : ''}
+                                    <div class="card-body">
+                                        <h5 class="card-title">${producto.nombre}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">${producto.categoria || 'Sin categoría'}</h6>
+                                        <p class="card-text">${producto.descripcion || 'Sin descripción'}</p>
+                                    </div>
+                                    <div class="card-footer">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-primary fw-bold">${producto.precio.toFixed(2)} €</span>
+                                            <span class="badge bg-${producto.stock > 0 ? 'success' : 'danger'}">
+                                                ${producto.stock > 0 ? 'Disponible' : 'Agotado'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    resultsContainer.innerHTML = resultsHTML;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultsContainer.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <p class="text-danger">Error al buscar productos. Inténtalo de nuevo.</p>
+                        </div>
+                    `;
+                });
+        } else {
+            // Si no tenemos ubicación, buscar productos generales
+            fetch(`/api/buscar/productos?termino=${encodeURIComponent(termino)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.resultados.length === 0) {
+                        resultsContainer.innerHTML = `
+                            <div class="col-12 text-center py-5">
+                                <p class="text-muted">No se encontraron productos para "${termino}"</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Mostrar tiendas en el mapa
+                    const bounds = L.latLngBounds();
+                    const tiendas = {};
+                    
+                    data.resultados.forEach(producto => {
+                        const tiendaId = producto.tienda.id;
+                        
+                        // Agrupar productos por tienda
+                        if (!tiendas[tiendaId]) {
+                            tiendas[tiendaId] = {
+                                info: producto.tienda,
+                                productos: []
+                            };
+                            
+                            // Añadir marcador de tienda
+                            const tiendaIcon = L.icon({
+                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                                iconSize: [25, 41],
+                                iconAnchor: [12, 41],
+                                popupAnchor: [1, -34]
+                            });
+                            
+                            const marker = L.marker([producto.tienda.latitud, producto.tienda.longitud], {
+                                icon: tiendaIcon,
+                                title: producto.tienda.nombre
+                            }).addTo(map);
+                            
+                            marker.bindPopup(`
+                                <strong>${producto.tienda.nombre}</strong><br>
+                                ${producto.tienda.direccion}
+                            `);
+                            
+                            markers.push(marker);
+                            bounds.extend([producto.tienda.latitud, producto.tienda.longitud]);
+                        }
+                        
+                        tiendas[tiendaId].productos.push(producto);
+                    });
+                    
+                    // Ajustar vista del mapa
+                    if (Object.keys(tiendas).length > 0) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                    
+                    // Mostrar resultados
+                    let resultsHTML = `
+                        <div class="col-12 mb-4">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Para ver la tienda más cercana, activa tu ubicación haciendo clic en el botón <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Mostrar productos agrupados por tienda
+                    Object.values(tiendas).forEach(tienda => {
+                        resultsHTML += `
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">${tienda.info.nombre}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <i class="fas fa-map-marker-alt me-2"></i>${tienda.info.direccion}
+                                        </p>
+                                        <div class="row">
+                        `;
+                        
+                        tienda.productos.forEach(producto => {
+                            resultsHTML += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100 producto-card">
+                                        ${producto.imagen ? `<img src="${producto.imagen}" class="card-img-top" alt="${producto.nombre}">` : ''}
+                                        <div class="card-body">
+                                            <h5 class="card-title">${producto.nombre}</h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">${producto.categoria || 'Sin categoría'}</h6>
+                                            <p class="card-text">${producto.descripcion || 'Sin descripción'}</p>
+                                        </div>
+                                        <div class="card-footer">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-primary fw-bold">${producto.precio.toFixed(2)} €</span>
+                                                <span class="badge bg-${producto.stock > 0 ? 'success' : 'danger'}">
+                                                    ${producto.stock > 0 ? 'Disponible' : 'Agotado'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        resultsHTML += `
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    resultsContainer.innerHTML = resultsHTML;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resultsContainer.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <p class="text-danger">Error al buscar productos. Inténtalo de nuevo.</p>
+                        </div>
+                    `;
+                });
+        }
+    }
+    
+    // Limpiar marcadores
+    function clearMarkers() {
+        markers.forEach(marker => {
+            map.removeLayer(marker);
+        });
+        markers = [];
+    }
+    
+    // Inicializar cuando el documento esté listo
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Tiendas - TiendasGeo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Mis Tiendas</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('tiendas.crear_tienda') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Nueva Tienda
+        </a>
+    </div>
+</div>
+
+{% if tiendas %}
+    <div class="row">
+        {% for tienda in tiendas %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ tienda.nombre }}</h5>
+                        <p class="card-text text-muted">
+                            <i class="fas fa-map-marker-alt me-2"></i>{{ tienda.direccion }}
+                        </p>
+                        <p class="card-text">
+                            {% if tienda.descripcion %}
+                                {{ tienda.descripcion|truncate(100) }}
+                            {% else %}
+                                <span class="text-muted">Sin descripción</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <div class="btn-group w-100" role="group">
+                            <a href="{{ url_for('tiendas.detalle_tienda', tienda_id=tienda._id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Ver
+                            </a>
+                            <a href="{{ url_for('productos.listar_productos', tienda_id=tienda._id) }}" class="btn btn-outline-success">
+                                <i class="fas fa-box me-1"></i>Productos
+                            </a>
+                            <a href="{{ url_for('tiendas.editar_tienda', tienda_id=tienda._id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <h4 class="alert-heading"><i class="fas fa-info-circle me-2"></i>No tienes tiendas registradas</h4>
+        <p>Para comenzar a utilizar TiendasGeo, crea tu primera tienda haciendo clic en el botón "Nueva Tienda".</p>
+        <hr>
+        <p class="mb-0">Una vez creada tu tienda, podrás añadir productos y comenzar a gestionar tu inventario.</p>
+    </div>
+{% endif %}
+{% endblock %}

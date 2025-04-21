@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Productos de {{ tienda.nombre }} - TiendasGeo{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>Productos de {{ tienda.nombre }}</h1>
+        <p class="text-muted">
+            <i class="fas fa-map-marker-alt me-2"></i>{{ tienda.direccion }}
+        </p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('productos.crear_producto', tienda_id=tienda._id) }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Nuevo Producto
+            </a>
+            <a href="{{ url_for('productos.cargar_csv', tienda_id=tienda._id) }}" class="btn btn-success">
+                <i class="fas fa-file-csv me-2"></i>Cargar CSV
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if productos %}
+    <div class="row">
+        {% for producto in productos %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    {% if producto.imagen %}
+                        <img src="{{ producto.imagen }}" class="card-img-top" alt="{{ producto.nombre }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ producto.nombre }}</h5>
+                        {% if producto.categoria %}
+                            <h6 class="card-subtitle mb-2 text-muted">{{ producto.categoria }}</h6>
+                        {% endif %}
+                        <p class="card-text">
+                            {% if producto.descripcion %}
+                                {{ producto.descripcion|truncate(100) }}
+                            {% else %}
+                                <span class="text-muted">Sin descripción</span>
+                            {% endif %}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-primary fw-bold">{{ "%.2f"|format(producto.precio) }} €</span>
+                            <span class="badge bg-{{ 'success' if producto.stock > 0 else 'danger' }}">
+                                {{ 'Disponible' if producto.stock > 0 else 'Agotado' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <div class="btn-group w-100" role="group">
+                            <a href="{{ url_for('productos.editar_producto', producto_id=producto._id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ producto._id }}">
+                                <i class="fas fa-trash me-1"></i>Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modal de confirmación para eliminar -->
+                <div class="modal fade" id="deleteModal{{ producto._id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ producto._id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteModalLabel{{ producto._id }}">Confirmar eliminación</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                ¿Estás seguro de que deseas eliminar el producto <strong>{{ producto.nombre }}</strong>?
+                                Esta acción no se puede deshacer.
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <form action="{{ url_for('productos.eliminar_producto', producto_id=producto._id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <h4 class="alert-heading"><i class="fas fa-info-circle me-2"></i>No hay productos registrados</h4>
+        <p>Esta tienda aún no tiene productos. Puedes añadir productos de forma individual o cargar un archivo CSV con múltiples productos.</p>
+        <hr>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-plus fa-3x mb-3 text-primary"></i>
+                        <h5>Añadir producto individual</h5>
+                        <p>Crea un nuevo producto con todos sus detalles.</p>
+                        <a href="{{ url_for('productos.crear_producto', tienda_id=tienda._id) }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Nuevo Producto
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-file-csv fa-3x mb-3 text-success"></i>
+                        <h5>Cargar productos desde CSV</h5>
+                        <p>Importa múltiples productos desde un archivo CSV.</p>
+                        <a href="{{ url_for('productos.cargar_csv', tienda_id=tienda._id) }}" class="btn btn-success">
+                            <i class="fas fa-file-csv me-2"></i>Cargar CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{{ url_for('tiendas.listar_tiendas') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Volver a Mis Tiendas
+    </a>
+</div>
+{% endblock %}

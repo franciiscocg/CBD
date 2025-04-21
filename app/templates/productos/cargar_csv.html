@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Cargar Productos CSV - TiendasGeo{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Cargar Productos desde CSV - {{ tienda.nombre }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle me-2"></i>Instrucciones</h5>
+                    <p>Sube un archivo CSV con los productos que deseas añadir a tu tienda. El archivo debe contener las siguientes columnas:</p>
+                    <ul>
+                        <li><strong>nombre</strong> (obligatorio): Nombre del producto</li>
+                        <li><strong>precio</strong> (obligatorio): Precio del producto (número decimal)</li>
+                        <li><strong>stock</strong> (obligatorio): Cantidad disponible (número entero)</li>
+                        <li><strong>descripcion</strong> (opcional): Descripción del producto</li>
+                        <li><strong>codigo</strong> (opcional): Código o referencia del producto</li>
+                        <li><strong>categoria</strong> (opcional): Categoría del producto</li>
+                    </ul>
+                    <p>Si un producto ya existe (mismo código o nombre), se actualizará con la información del CSV.</p>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="archivo_csv" class="form-label">Archivo CSV</label>
+                        <input type="file" class="form-control" id="archivo_csv" name="archivo_csv" accept=".csv" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Ejemplo de formato CSV:</label>
+                        <pre class="bg-light p-3 border rounded">nombre,precio,stock,descripcion,codigo,categoria
+Smartphone XYZ,299.99,10,Smartphone de última generación,SM001,Electrónica
+Auriculares Bluetooth,49.99,20,Auriculares inalámbricos con cancelación de ruido,AU002,Accesorios
+Monitor 24",159.50,5,Monitor LED Full HD,MO003,Informática</pre>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('productos.listar_productos', tienda_id=tienda._id) }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i>Volver
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Cargar Archivo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ tienda.nombre }} - Detalles{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ tienda.nombre }}</h1>
+            <p class="lead">{{ tienda.descripcion }}</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('tiendas.editar_tienda', tienda_id=tienda._id) }}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i> Editar tienda
+            </a>
+            <a href="{{ url_for('productos.cargar_csv', tienda_id=tienda._id) }}" class="btn btn-success ms-2">
+                <i class="fas fa-file-csv me-1"></i> Cargar productos
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Información de la tienda</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                            <strong>Dirección:</strong> {{ tienda.direccion }}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-phone me-2 text-primary"></i>
+                            <strong>Teléfono:</strong> {{ tienda.telefono or 'No disponible' }}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-envelope me-2 text-primary"></i>
+                            <strong>Email:</strong> {{ tienda.email or 'No disponible' }}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-globe me-2 text-primary"></i>
+                            <strong>Sitio web:</strong> 
+                            {% if tienda.sitio_web %}
+                                <a href="{{ tienda.sitio_web }}" target="_blank">{{ tienda.sitio_web }}</a>
+                            {% else %}
+                                No disponible
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-clock me-2 text-primary"></i>
+                            <strong>Horario:</strong> {{ tienda.horario or 'No disponible' }}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-tags me-2 text-primary"></i>
+                            <strong>Categorías:</strong> 
+                            {% if tienda.categorias %}
+                                {% for categoria in tienda.categorias %}
+                                    <span class="badge bg-secondary me-1">{{ categoria }}</span>
+                                {% endfor %}
+                            {% else %}
+                                No disponible
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-map me-2"></i>Ubicación</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="mapa" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="fas fa-box me-2"></i>Productos ({{ productos|length }})</h5>
+                    <a href="{{ url_for('productos.crear_producto', tienda_id=tienda._id) }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-1"></i> Añadir producto
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if productos %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Descripción</th>
+                                        <th>Precio</th>
+                                        <th>Stock</th>
+                                        <th>Categoría</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for producto in productos %}
+                                        <tr>
+                                            <td>{{ producto.nombre }}</td>
+                                            <td>{{ producto.descripcion|truncate(50) }}</td>
+                                            <td>{{ producto.precio }} €</td>
+                                            <td>{{ producto.stock }}</td>
+                                            <td>{{ producto.categoria }}</td>
+                                            <td>
+                                                <a href="{{ url_for('productos.editar_producto', producto_id=producto._id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{{ url_for('productos.eliminar_producto', producto_id=producto._id) }}" class="btn btn-sm btn-outline-danger" 
+                                                   onclick="return confirm('¿Estás seguro de que deseas eliminar este producto?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> No hay productos registrados para esta tienda.
+                            <a href="{{ url_for('productos.cargar_csv', tienda_id=tienda._id) }}" class="alert-link">Cargar productos desde CSV</a> o
+                            <a href="{{ url_for('productos.crear_producto', tienda_id=tienda._id) }}" class="alert-link">añadir un producto manualmente</a>.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar el mapa
+        var map = L.map('mapa').setView([{{ tienda.latitud }}, {{ tienda.longitud }}], 15);
+        
+        // Añadir capa de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Añadir marcador de la tienda
+        L.marker([{{ tienda.latitud }}, {{ tienda.longitud }}])
+            .addTo(map)
+            .bindPopup('<strong>{{ tienda.nombre }}</strong><br>{{ tienda.direccion }}')
+            .openPopup();
+    });
+</script>
+{% endblock %}
