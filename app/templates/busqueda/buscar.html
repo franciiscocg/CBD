@@ -111,7 +111,8 @@
     function getUserLocation() {
         const statusElement = document.getElementById('location-status');
         statusElement.style.display = 'block';
-        
+        statusElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Obteniendo tu ubicación con alta precisión...`;
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
@@ -119,32 +120,56 @@
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                     };
-                    
-                    // Actualizar mapa
-                    map.setView([userLocation.lat, userLocation.lng], 14);
-                    
-                    // Añadir marcador de usuario
+
+                    const precision = position.coords.accuracy;
+                    const originalLatLng = L.latLng(userLocation.lat, userLocation.lng);
+
+                    map.setView(originalLatLng, 14);
+
+                    // Crear marcador
                     if (userMarker) {
-                        userMarker.setLatLng([userLocation.lat, userLocation.lng]);
-                    } else {
-                        const userIcon = L.icon({
-                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                            iconSize: [25, 41],
-                            iconAnchor: [12, 41],
-                            popupAnchor: [1, -34]
-                        });
-                        
-                        userMarker = L.marker([userLocation.lat, userLocation.lng], {
-                            icon: userIcon,
-                            title: 'Tu ubicación'
-                        }).addTo(map);
-                        
-                        userMarker.bindPopup('Tu ubicación actual').openPopup();
+                        map.removeLayer(userMarker);
                     }
-                    
+
+                    const userIcon = L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34]
+                    });
+
+                    userMarker = L.marker(originalLatLng, {
+                        icon: userIcon,
+                        title: 'Tu ubicación',
+                        draggable: true
+                    }).addTo(map);
+
+                    // Crear círculo
+                    const circle = L.circle(originalLatLng, {
+                        radius: precision,
+                        color: 'blue',
+                        fillColor: '#a3caff',
+                        fillOpacity: 0.3
+                    }).addTo(map);
+
+                    // Restringir movimiento del marcador
+                    userMarker.on('dragend', function(e) {
+                        const newLatLng = e.target.getLatLng();
+                        const distance = originalLatLng.distanceTo(newLatLng); // en metros
+
+                        if (distance > precision) {
+                            alert(`Solo puedes mover el marcador dentro de un radio de ${Math.round(precision)} metros.`);
+                            userMarker.setLatLng(originalLatLng); // lo devolvemos a su sitio
+                        } else {
+                            userLocation.lat = newLatLng.lat;
+                            userLocation.lng = newLatLng.lng;
+                            alert(`Ubicación ajustada dentro del rango permitido.`);
+                        }
+                    });
+
+                    userMarker.bindPopup(`Tu ubicación actual (±${Math.round(precision)} m)`).openPopup();
                     statusElement.style.display = 'none';
-                    
-                    // Si hay un término de búsqueda, buscar productos cercanos
+
                     const searchInput = document.getElementById('search-input');
                     if (searchInput.value.trim() !== '') {
                         searchProducts();
@@ -154,6 +179,11 @@
                     statusElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error al obtener tu ubicación: ${error.message}`;
                     statusElement.classList.remove('alert-info');
                     statusElement.classList.add('alert-danger');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
             );
         } else {
