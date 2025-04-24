@@ -125,6 +125,7 @@
     function getUserLocation() {
         const statusElement = document.getElementById('location-status');
         statusElement.style.display = 'block';
+        statusElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Obteniendo tu ubicación con alta precisión...`;
         
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -134,28 +135,53 @@
                         lng: position.coords.longitude
                     };
                     
-                    // Actualizar mapa
-                    map.setView([userLocation.lat, userLocation.lng], 14);
-                    
-                    // Añadir marcador de usuario
+                    const precision = position.coords.accuracy;
+                    const originalLatLng = L.latLng(userLocation.lat, userLocation.lng);
+
+                    map.setView(originalLatLng, 14);
+
+                    // Crear marcador
                     if (userMarker) {
-                        userMarker.setLatLng([userLocation.lat, userLocation.lng]);
-                    } else {
-                        const userIcon = L.icon({
-                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                            iconSize: [25, 41],
-                            iconAnchor: [12, 41],
-                            popupAnchor: [1, -34]
-                        });
-                        
-                        userMarker = L.marker([userLocation.lat, userLocation.lng], {
-                            icon: userIcon,
-                            title: 'Tu ubicación'
-                        }).addTo(map);
-                        
-                        userMarker.bindPopup('Tu ubicación actual').openPopup();
+                        map.removeLayer(userMarker);
                     }
-                    
+
+                    const userIcon = L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34]
+                    });
+
+                    userMarker = L.marker(originalLatLng, {
+                        icon: userIcon,
+                        title: 'Tu ubicación',
+                        draggable: true
+                    }).addTo(map);
+
+                    // Crear círculo
+                    const circle = L.circle(originalLatLng, {
+                        radius: precision,
+                        color: 'blue',
+                        fillColor: '#a3caff',
+                        fillOpacity: 0.3
+                    }).addTo(map);
+
+                    // Restringir movimiento del marcador
+                    userMarker.on('dragend', function(e) {
+                        const newLatLng = e.target.getLatLng();
+                        const distance = originalLatLng.distanceTo(newLatLng); // en metros
+
+                        if (distance > precision) {
+                            alert(`Solo puedes mover el marcador dentro de un radio de ${Math.round(precision)} metros.`);
+                            userMarker.setLatLng(originalLatLng); // lo devolvemos a su sitio
+                        } else {
+                            userLocation.lat = newLatLng.lat;
+                            userLocation.lng = newLatLng.lng;
+                            alert(`Ubicación ajustada dentro del rango permitido.`);
+                        }
+                    });
+
+                    userMarker.bindPopup(`Arrastralo a tu ubicacion para mayor precisión`).openPopup();
                     statusElement.style.display = 'none';
                     
                     // Buscar tiendas cercanas
@@ -439,32 +465,32 @@
     }
     
     
-let routeControl = null;
-let nearestStoreLocation = null;
+    let routeControl = null;
+    let nearestStoreLocation = null;
 
 document.getElementById('route-button').addEventListener('click', function() {
-    if (!userLocation || !nearestStoreLocation) {
-        alert("Primero obtén tu ubicación y busca un producto.");
-        return;
-    }
+        if (!userLocation || !nearestStoreLocation) {
+            alert("Primero obtén tu ubicación y busca un producto.");
+            return;
+        }
 
-    if (routeControl) {
-        map.removeControl(routeControl);
-    }
+        if (routeControl) {
+            map.removeControl(routeControl);
+        }
 
-    routeControl = L.Routing.control({
-        waypoints: [
-            L.latLng(userLocation.lat, userLocation.lng),
-            L.latLng(nearestStoreLocation.lat, nearestStoreLocation.lng)
-        ],
-        routeWhileDragging: false,
-        addWaypoints: false,
+        routeControl = L.Routing.control({
+            waypoints: [
+                L.latLng(userLocation.lat, userLocation.lng),
+                L.latLng(nearestStoreLocation.lat, nearestStoreLocation.lng)
+            ],
+            routeWhileDragging: false,
+            addWaypoints: false,
         language: 'es',
-        show: false,
-        createMarker: () => null
+            show: false,
+            createMarker: () => null
 
-    }).addTo(map);
-});
+        }).addTo(map);
+    });
 
 
     // Inicializar cuando el documento esté listo

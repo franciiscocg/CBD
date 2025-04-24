@@ -34,11 +34,20 @@
         <div class="search-container">
             <div class="row">
                 <div class="col-md-8">
-                    <div class="input-group mb-3">
-                        <input type="text" id="search-input" class="form-control form-control-lg" placeholder="¿Qué producto estás buscando?">
-                        <button class="btn btn-primary" type="button" id="search-button">
-                            <i class="fas fa-search"></i> Buscar
-                        </button>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <input type="text" id="search-input" class="form-control" placeholder="¿Qué producto estás buscando?">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="button" id="search-button">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-outline-success" type="button" id="route-button">
+                                <i class="fas fa-route"></i> Ver Ruta
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -167,7 +176,7 @@
                         }
                     });
 
-                    userMarker.bindPopup(`Tu ubicación actual (±${Math.round(precision)} m)`).openPopup();
+                    userMarker.bindPopup(`Arrastralo a tu ubicacion para mayor precisión`).openPopup();
                     statusElement.style.display = 'none';
 
                     const searchInput = document.getElementById('search-input');
@@ -235,6 +244,7 @@
                     
                     // Mostrar tienda en el mapa
                     const tienda = data.tienda;
+                    nearestStoreLocation = { lat: tienda.latitud, lng: tienda.longitud };
                     const tiendaIcon = L.icon({
                         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
                         iconSize: [25, 41],
@@ -450,8 +460,38 @@
         });
         markers = [];
     }
+    let routeControl = null;
+    let nearestStoreLocation = null;
+
+    document.getElementById('route-button').addEventListener('click', function() {
+        if (!userLocation || !nearestStoreLocation) {
+            alert("Primero obtén tu ubicación y busca un producto.");
+            return;
+        }
+
+        if (routeControl) {
+            map.removeControl(routeControl);
+        }
+
+        routeControl = L.Routing.control({
+            waypoints: [
+                L.latLng(userLocation.lat, userLocation.lng),
+                L.latLng(nearestStoreLocation.lat, nearestStoreLocation.lng)
+            ],
+            routeWhileDragging: false,
+            addWaypoints: false,
+            language: 'es',
+            show: false,
+            createMarker: () => null
+
+        }).addTo(map);
+    });
     
     // Inicializar cuando el documento esté listo
     document.addEventListener('DOMContentLoaded', initMap);
 </script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
+
 {% endblock %}
