@@ -45,27 +45,18 @@ TiendasGeo es una aplicación web que permite a los usuarios buscar productos y 
 
 3. Asegúrate de tener MongoDB en ejecución en localhost:27017 o configura la variable de entorno `MONGODB_URI` en el archivo `.env`.
 
-4. Ejecuta la aplicación:
+5. Pobla la base de datos:
+   ```
+   python seed_db.py
+   ```
+
+5. Ejecuta la aplicación:
    ```
    python run.py
    ```
 
-5. Accede a la aplicación en tu navegador: http://localhost:5000
+6. Accede a la aplicación en tu navegador: http://localhost:5000
 
-### Opción 2: Usando Docker Compose
-
-1. Clona el repositorio:
-   ```
-   git clone https://github.com/tu-usuario/tiendasgeo.git
-   cd tiendasgeo
-   ```
-
-2. Inicia los contenedores con Docker Compose:
-   ```
-   docker-compose up -d
-   ```
-
-3. Accede a la aplicación en tu navegador: http://localhost:5000
 
 ## Estructura del Proyecto
 
@@ -88,6 +79,7 @@ proyecto_tiendas_flask/
 ├── README.md                 # Este archivo
 ├── requirements.txt          # Dependencias de Python
 ├── run.py                    # Script para ejecutar en desarrollo
+├── seed_db.py                # Script para poblar la base de datos
 ├── run_tests.sh              # Script para ejecutar pruebas
 ├── start_dev.sh              # Script para iniciar en desarrollo
 └── wsgi.py                   # Punto de entrada para WSGI

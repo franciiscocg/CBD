@@ -100,7 +100,7 @@ TiendasGeo utiliza una arquitectura basada en Flask como framework web y MongoDB
   "email": "tienda@ejemplo.com",
   "sitio_web": "https://tienda-ejemplo.com",
   "horario": "Lun-Vie: 9:00-20:00",
-  "propietario_id": ObjectId("..."),
+  "propietario_id": "...",
   "latitud": 40.416775,
   "longitud": -3.703790,
   "ubicacion": {
@@ -249,37 +249,11 @@ function initMap() {
 
 Para el entorno de desarrollo, se utiliza un servidor Flask integrado:
 
-```bash
+```
+python seed_db.py
 python run.py
 ```
 
-### 7.2 Entorno de Producción
-
-Para producción, se utiliza Docker y Docker Compose:
-
-```yaml
-version: '3'
-
-services:
-  web:
-    build: .
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./app/static/uploads:/app/app/static/uploads
-    environment:
-      - MONGODB_URI=mongodb://mongo:27017/tiendas_geo_db
-    depends_on:
-      - mongo
-
-  mongo:
-    image: mongo:4.4
-    volumes:
-      - mongo_data:/data/db
-
-volumes:
-  mongo_data:
-```
 
 ## 8. Pruebas
 
