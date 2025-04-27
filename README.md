@@ -80,8 +80,6 @@ proyecto_tiendas_flask/
 ├── requirements.txt          # Dependencias de Python
 ├── run.py                    # Script para ejecutar en desarrollo
 ├── seed_db.py                # Script para poblar la base de datos
-├── run_tests.sh              # Script para ejecutar pruebas
-├── start_dev.sh              # Script para iniciar en desarrollo
 └── wsgi.py                   # Punto de entrada para WSGI
 ```
 
@@ -89,10 +87,9 @@ proyecto_tiendas_flask/
 
 ### Para Usuarios
 
-1. Regístrate o inicia sesión en la aplicación
-2. Utiliza la barra de búsqueda para encontrar productos
-3. Activa tu ubicación para ver las tiendas más cercanas
-4. Explora el mapa para ver todas las tiendas disponibles
+1. Utiliza la barra de búsqueda para encontrar productos
+2. Activa tu ubicación para ver las tiendas más cercanas
+3. Explora el mapa para ver todas las tiendas disponibles
 
 ### Para Dueños de Tiendas
 
