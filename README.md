@@ -107,4 +107,4 @@ Este proyecto está licenciado bajo la Licencia MIT - ver el archivo LICENSE par
 
 ## Contacto
 
-Para cualquier consulta o sugerencia, por favor contacta a [tu-email@ejemplo.com](mailto:tu-email@ejemplo.com).
+Para cualquier consulta o sugerencia, por favor contacta a [fracapgar1@alum.us.es](mailto:fracapgar1@alum.us.es).
