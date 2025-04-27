@@ -14,7 +14,7 @@
 *   [Capítulo 1: Introducción](#capítulo-1-introducción)
 *   [Capítulo 2: Estado del Arte y Tecnologías](#capítulo-2-estado-del-arte-y-tecnologías)
 *   [Capítulo 3: Diseño y Arquitectura](#capítulo-3-diseño-y-arquitectura)
-*   [Capítulo 4: Manual de Usuario](#capítulo-6-manual-de-usuario)
+*   [Capítulo 4: Manual de Usuario](#capítulo-4-manual-de-usuario)
 *   [Capítulo 5: Manual de Despliegue/Instalación](#capítulo-5-manual-de-despliegueinstalación)
 *   [Capítulo 6: Conclusiones y Trabajo Futuro](#capítulo-6-conclusiones-y-trabajo-futuro)
 *   [Bibliografía](#bibliografía)
@@ -30,11 +30,9 @@ Esta memoria técnica documenta en detalle el proceso de desarrollo, diseño e i
 *   **Capítulo 1: Introducción:** Presenta la motivación, los objetivos, el alcance del proyecto y la estructura de este documento.
 *   **Capítulo 2: Estado del Arte y Tecnologías:** Analiza soluciones similares existentes y justifica la selección de las tecnologías clave utilizadas en el desarrollo (Flask, MongoDB, Leaflet.js, Docker, etc.).
 *   **Capítulo 3: Diseño y Arquitectura:** Describe la arquitectura general de la aplicación, el diseño detallado de la base de datos NoSQL, el diseño de la interfaz de usuario y la estructura de las rutas o API.
-*   **Capítulo 4: Implementación:** Detalla cómo se llevaron a cabo la codificación y el desarrollo de los diferentes módulos del sistema, tanto en el backend como en el frontend, así como la configuración de la contenerización.
-*   **Capítulo 5: Pruebas:** Explica la estrategia de pruebas seguida y presenta los resultados de las pruebas unitarias y manuales realizadas para asegurar la calidad y el correcto funcionamiento de la aplicación.
-*   **Capítulo 6: Manual de Usuario:** Proporciona una guía detallada sobre cómo utilizar las diferentes funcionalidades de la aplicación desde la perspectiva del usuario final (consumidor y propietario de tienda).
-*   **Capítulo 7: Manual de Despliegue/Instalación:** Ofrece instrucciones paso a paso para instalar y ejecutar la aplicación tanto en un entorno local como utilizando Docker.
-*   **Capítulo 8: Conclusiones y Trabajo Futuro:** Resume los logros del proyecto, evalúa la consecución de los objetivos, discute las dificultades encontradas y propone posibles líneas de mejora o expansión futura.
+*   **Capítulo 4: Manual de Usuario:** Proporciona una guía detallada sobre cómo utilizar las diferentes funcionalidades de la aplicación desde la perspectiva del usuario final (consumidor y propietario de tienda).
+*   **Capítulo 5: Manual de Despliegue/Instalación:** Ofrece instrucciones paso a paso para instalar y ejecutar la aplicación tanto en un entorno local como utilizando Docker.
+*   **Capítulo 6: Conclusiones y Trabajo Futuro:** Resume los logros del proyecto, evalúa la consecución de los objetivos, discute las dificultades encontradas y propone posibles líneas de mejora o expansión futura.
 
 Finalmente, se incluye una sección de **Bibliografía** con las referencias a las fuentes consultadas durante el desarrollo del proyecto y la redacción de esta memoria.
 
@@ -272,7 +270,7 @@ Estas relaciones se implementan mediante referencias (no mediante documentos emb
 
 El diseño de la interfaz de usuario de TiendasGeo se ha desarrollado siguiendo principios de usabilidad, accesibilidad y diseño responsivo, con el objetivo de proporcionar una experiencia intuitiva tanto en dispositivos de escritorio como móviles.
 
-![alt text](image.png)
+![Pagina /buscar](image.png)
 **Figura 3.2: Vista de Búsqueda**
 
 La página principal de búsqueda presenta una interfaz limpia y centrada en la acción principal: buscar productos. Incluye:
@@ -281,7 +279,7 @@ La página principal de búsqueda presenta una interfaz limpia y centrada en la 
 - Botón de búsqueda
 - Boton de mostrar la ruta para llegar al destino
 
-![alt text](image-1.png)
+![Pagina /mapa](image-1.png)
 **Figura 3.3: Vista de Mapa**
 
 La vista de mapa muestra:
@@ -290,7 +288,7 @@ La vista de mapa muestra:
 - Panel lateral con lista de tiendas y distancias
 - Información emergente al hacer clic en los marcadores
 
-![alt text](image-2.png)
+![Pagina /tiendas/](image-2.png)
 **Figura 3.4: Vista de Gestión de Tienda**
 
 El panel de gestión de tiendas para propietarios incluye:
