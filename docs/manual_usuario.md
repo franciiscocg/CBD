@@ -48,13 +48,7 @@ La aplicación es compatible con los siguientes navegadores:
 
 ## 4. Búsqueda de Productos
 
-### 4.1 Búsqueda Básica
-
-1. En la página principal, introduce el nombre del producto que buscas en la barra de búsqueda.
-2. Haz clic en el botón "Buscar" o presiona Enter.
-3. Se mostrarán los resultados de la búsqueda.
-
-### 4.2 Búsqueda con Ubicación
+### 4.1 Búsqueda con Ubicación
 
 Para encontrar la tienda más cercana con el producto que buscas:
 
