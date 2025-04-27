@@ -102,3 +102,11 @@ class Producto:
         
         cursor = cls.collection.find(query)
         return [cls.from_dict(data) for data in cursor]
+
+    def delete(self):
+        """Elimina el objeto de la base de datos."""
+        if self._id:
+            result = self.collection.delete_one({"_id": self._id})
+            return result.deleted_count > 0
+        return False
+
