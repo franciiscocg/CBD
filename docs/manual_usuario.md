@@ -56,6 +56,7 @@ Para encontrar la tienda más cercana con el producto que buscas:
 2. Haz clic en el botón de ubicación (icono de marcador) para activar tu ubicación.
 3. Cuando se detecte tu ubicación, haz clic en "Buscar".
 4. Los resultados mostrarán la tienda más cercana que tiene el producto, junto con la distancia.
+5. Haz clic en el botón "ver Ruta" para trazar el camino mas corto en coche
 
 ## 5. Visualización de Mapas
 
@@ -72,6 +73,7 @@ Para encontrar la tienda más cercana con el producto que buscas:
 2. Permite el acceso a tu ubicación cuando el navegador lo solicite.
 3. Tu posición se mostrará en el mapa con un marcador azul.
 4. Las tiendas cercanas se mostrarán con marcadores rojos.
+5. Cualquier producto que busque aparecera en las tiendas situadas en el radio definido
 
 ## 6. Gestión de Tiendas
 
