@@ -1,10 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from app.models.tienda import Tienda
 from app.models.producto import Producto
 from app.services.geo_service import calcular_distancia, encontrar_tienda_mas_cercana
-import json
-from bson import ObjectId
 
 busqueda = Blueprint('busqueda', __name__)
 
@@ -16,44 +13,8 @@ def index():
 @busqueda.route('/buscar')
 def buscar():
     """Página de búsqueda de productos"""
-    query = request.args.get('q', '')
-    lat = request.args.get('lat', type=float)
-    lng = request.args.get('lng', type=float)
-    
-    resultados = []
-    tiendas_cercanas = []
-    
-    if query:
-        # Buscar productos que coincidan con la consulta
-        productos = Producto.search(query)
-        
-        if lat and lng and productos:
-            # Si tenemos ubicación y productos, encontrar tiendas cercanas
-            tiendas_ids = list(set([p.tienda_id for p in productos]))
-            tiendas = [Tienda.find_by_id(tid) for tid in tiendas_ids if Tienda.find_by_id(tid)]
-            
-            # Calcular distancias y ordenar por cercanía
-            tiendas_con_distancia = []
-            for t in tiendas:
-                if t and t.activo: # Asegurarse que la tienda existe y está activa
-                    dist = calcular_distancia(lat, lng, t.latitud, t.longitud)
-                    tiendas_con_distancia.append((t, dist))
-            
-            tiendas_cercanas = sorted(tiendas_con_distancia, key=lambda x: x[1])
-            
-            # Preparar resultados para mostrar (en la página buscar.html, esto podría ser diferente)
-            # Esta lógica parece más para la página de resultados que para la API
-            # Debería revisarse si buscar.html usa esta ruta directamente o una API
-            # buscar.html usa /api/buscar/producto-cercano, así que esta lógica puede no ser relevante aquí
-            pass # Lógica de resultados omitida por ahora, ya que buscar.html usa API
-
-        elif productos:
-            # Lógica si no hay ubicación, también probablemente no usada por buscar.html
-            pass # Lógica omitida
-    
-    # La plantilla buscar.html parece depender principalmente de JS y APIs
-    # Pasar query podría ser útil para pre-rellenar el campo de búsqueda si viene en URL
-    return render_template('busqueda/buscar.html', query=query)
+    # Esta ruta carga la plantilla mapa.html, que luego usa JS y APIs
+    return render_template('busqueda/buscar.html')
 
 @busqueda.route('/mapa')
 def mapa():
@@ -126,8 +87,6 @@ def api_buscar_producto_cercano():
                      tiendas_con_producto_activo.append(tienda)
                 if tienda_id_str not in productos_por_tienda:
                     productos_por_tienda[tienda_id_str] = []
-                # Añadir solo si el nombre coincide exactamente o muy similarmente?
-                # Por ahora, añadimos todos los productos encontrados por Producto.search
                 productos_por_tienda[tienda_id_str].append(producto)
 
     if not tiendas_con_producto_activo:
@@ -151,7 +110,7 @@ def api_buscar_producto_cercano():
             'nombre': producto.nombre,
             'precio': producto.precio,
             'stock': producto.stock,
-            'imagen': producto.imagen  # Corregido: usar el atributo imagen directamente
+            'imagen': producto.imagen 
             # 'categoria': producto.categoria,
             # 'descripcion': producto.descripcion
         })
@@ -168,7 +127,6 @@ def api_buscar_producto_cercano():
         'productos': productos_json
     })
 
-# --- NUEVO ENDPOINT --- 
 @busqueda.route('/api/buscar/productos-en-radio')
 def api_buscar_productos_en_radio():
     """API para buscar todas las tiendas con un producto específico dentro de un radio"""
