@@ -19,6 +19,10 @@
         max-height: 600px;
         overflow-y: auto;
     }
+    .product-price {
+        font-weight: bold;
+        color: #0d6efd; /* Bootstrap primary color */
+    }
 </style>
 {% endblock %}
 
@@ -43,11 +47,12 @@
                                 <i class="fas fa-search"></i> Buscar
                             </button>
                         </div>
-                        <div class="col-auto">
+                        <!-- Botón Ver Ruta eliminado temporalmente, funcionalidad no clara -->
+                        <!-- <div class="col-auto">
                             <button class="btn btn-outline-success" type="button" id="route-button">
                                 <i class="fas fa-route"></i> Ver Ruta
                             </button>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -99,33 +104,56 @@
     let markers = [];
     let userLocation = null;
     
+    // Iconos personalizados
+    const userIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+    });
+    const tiendaIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+    });
+
     // Inicializar mapa
     function initMap() {
-        // Crear mapa centrado en España
         map = L.map('map').setView([40.416775, -3.703790], 6);
-        
-        // Añadir capa de OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
         
-        // Obtener ubicación del usuario
         document.getElementById('location-button').addEventListener('click', getUserLocation);
-        
-        // Configurar búsqueda
-        document.getElementById('search-button').addEventListener('click', searchProducts);
+        document.getElementById('search-button').addEventListener('click', handleSearch);
         document.getElementById('search-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                searchProducts();
+                handleSearch();
+            }
+        });
+        // Actualizar búsqueda de tiendas cercanas si cambia el radio y hay ubicación
+        document.getElementById('radio-select').addEventListener('change', () => {
+            if (userLocation && document.getElementById('search-input').value.trim() === '') {
+                 searchNearbyStores(); // Si no hay término de búsqueda, busca tiendas
+            } else if (userLocation) {
+                 searchProducts(); // Si hay término, busca productos en el nuevo radio
             }
         });
     }
     
+    // Limpiar marcadores (excepto el del usuario)
+    function clearMarkers() {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+    }
+
     // Obtener ubicación del usuario
     function getUserLocation() {
         const statusElement = document.getElementById('location-status');
         statusElement.style.display = 'block';
-        statusElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Obteniendo tu ubicación con alta precisión...`;
+        statusElement.className = 'alert alert-info'; // Reset class
+        statusElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Obteniendo tu ubicación...`;
         
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -135,143 +163,79 @@
                         lng: position.coords.longitude
                     };
                     
-                    const precision = position.coords.accuracy;
-                    const originalLatLng = L.latLng(userLocation.lat, userLocation.lng);
+                    const userLatLng = L.latLng(userLocation.lat, userLocation.lng);
+                    map.setView(userLatLng, 14);
 
-                    map.setView(originalLatLng, 14);
-
-                    // Crear marcador
-                    if (userMarker) {
-                        map.removeLayer(userMarker);
-                    }
-
-                    const userIcon = L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34]
-                    });
-
-                    userMarker = L.marker(originalLatLng, {
-                        icon: userIcon,
-                        title: 'Tu ubicación',
-                        draggable: true
-                    }).addTo(map);
-
-                    // Crear círculo
-                    const circle = L.circle(originalLatLng, {
-                        radius: precision,
-                        color: 'blue',
-                        fillColor: '#a3caff',
-                        fillOpacity: 0.3
-                    }).addTo(map);
-
-                    // Restringir movimiento del marcador
-                    userMarker.on('dragend', function(e) {
-                        const newLatLng = e.target.getLatLng();
-                        const distance = originalLatLng.distanceTo(newLatLng); // en metros
-
-                        if (distance > precision) {
-                            alert(`Solo puedes mover el marcador dentro de un radio de ${Math.round(precision)} metros.`);
-                            userMarker.setLatLng(originalLatLng); // lo devolvemos a su sitio
-                        } else {
-                            userLocation.lat = newLatLng.lat;
-                            userLocation.lng = newLatLng.lng;
-                            alert(`Ubicación ajustada dentro del rango permitido.`);
-                        }
-                    });
-
-                    userMarker.bindPopup(`Arrastralo a tu ubicacion para mayor precisión`).openPopup();
+                    if (userMarker) map.removeLayer(userMarker);
+                    userMarker = L.marker(userLatLng, { icon: userIcon, title: 'Tu ubicación' }).addTo(map);
+                    userMarker.bindPopup(`<b>Tu ubicación</b><br>Lat: ${userLocation.lat.toFixed(5)}, Lng: ${userLocation.lng.toFixed(5)}`).openPopup();
+                    
                     statusElement.style.display = 'none';
                     
-                    // Buscar tiendas cercanas
-                    searchNearbyStores();
+                    // Después de obtener ubicación, decidir qué buscar
+                    handleSearch(); 
                 },
                 function(error) {
                     statusElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error al obtener tu ubicación: ${error.message}`;
-                    statusElement.classList.remove('alert-info');
-                    statusElement.classList.add('alert-danger');
-                }
+                    statusElement.className = 'alert alert-danger';
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         } else {
             statusElement.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> Tu navegador no soporta geolocalización';
-            statusElement.classList.remove('alert-info');
-            statusElement.classList.add('alert-danger');
+            statusElement.className = 'alert alert-danger';
+        }
+    }
+
+    // Decide qué buscar: productos o tiendas cercanas
+    function handleSearch() {
+        const termino = document.getElementById('search-input').value.trim();
+        if (termino !== '') {
+            searchProducts();
+        } else if (userLocation) {
+            searchNearbyStores();
+        } else {
+            // No hay término ni ubicación, limpiar resultados
+            clearMarkers();
+            document.getElementById('results-container').innerHTML = `
+                <p class="text-muted text-center py-5">
+                    <i class="fas fa-search fa-2x mb-3"></i><br>
+                    Busca productos o activa tu ubicación para ver tiendas cercanas
+                </p>
+            `;
         }
     }
     
-    // Buscar tiendas cercanas
+    // Buscar tiendas cercanas (sin término de búsqueda)
     function searchNearbyStores() {
         const radioSelect = document.getElementById('radio-select');
         const resultsContainer = document.getElementById('results-container');
         const radio = radioSelect.value;
         
-        if (!userLocation) {
-            return;
-        }
+        if (!userLocation) return;
         
-        // Limpiar marcadores anteriores (excepto el del usuario)
         clearMarkers();
+        resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div><p class="mt-2">Buscando tiendas cercanas...</p></div>`;
         
-        // Mostrar cargando
-        resultsContainer.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p class="mt-2">Buscando tiendas cercanas...</p>
-            </div>
-        `;
-        
-        // Buscar tiendas cercanas
-        fetch(`/api/tiendas/cercanas?lat=${userLocation.lat}&lng=${userLocation.lng}&radio=${radio}`)
+        fetch(`/api/tiendas-cercanas?lat=${userLocation.lat}&lng=${userLocation.lng}&radio=${radio}`)
             .then(response => response.json())
             .then(data => {
-                if (data.resultados.length === 0) {
-                    resultsContainer.innerHTML = `
-                        <div class="text-center py-5">
-                            <p class="text-muted">No se encontraron tiendas en un radio de ${radio} km</p>
-                        </div>
-                    `;
+                if (!data.resultados || data.resultados.length === 0) {
+                    resultsContainer.innerHTML = `<div class="text-center py-5"><p class="text-muted">No se encontraron tiendas en un radio de ${radio} km</p></div>`;
                     return;
                 }
                 
-                // Mostrar tiendas en el mapa
                 const bounds = L.latLngBounds();
-                bounds.extend([userLocation.lat, userLocation.lng]);
+                if (userMarker) bounds.extend(userMarker.getLatLng());
+                
+                let resultsHTML = `<h6 class="mb-3">Tiendas cercanas (${data.total})</h6>`;
                 
                 data.resultados.forEach(tienda => {
-                    const tiendaIcon = L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34]
-                    });
-                    
-                    const marker = L.marker([tienda.latitud, tienda.longitud], {
-                        icon: tiendaIcon,
-                        title: tienda.nombre
-                    }).addTo(map);
-                    
-                    marker.bindPopup(`
-                        <strong>${tienda.nombre}</strong><br>
-                        ${tienda.direccion}<br>
-                        <strong>Distancia:</strong> ${tienda.distancia} km
-                    `);
-                    
+                    const marker = L.marker([tienda.latitud, tienda.longitud], { icon: tiendaIcon, title: tienda.nombre }).addTo(map);
+                    marker.bindPopup(`<strong>${tienda.nombre}</strong><br>${tienda.direccion}<br><strong>Distancia:</strong> ${tienda.distancia} km`);
                     markers.push(marker);
                     bounds.extend([tienda.latitud, tienda.longitud]);
-                });
-                
-                // Ajustar vista del mapa
-                map.fitBounds(bounds, { padding: [50, 50] });
-                
-                // Mostrar resultados
-                let resultsHTML = `
-                    <h6 class="mb-3">Tiendas cercanas (${data.resultados.length})</h6>
-                `;
-                
-                data.resultados.forEach(tienda => {
+                    
                     resultsHTML += `
                         <div class="card mb-3">
                             <div class="card-body">
@@ -280,7 +244,7 @@
                                     <i class="fas fa-map-marker-alt me-2"></i>${tienda.direccion}<br>
                                     <i class="fas fa-route me-2"></i>Distancia: ${tienda.distancia} km
                                 </p>
-                                <button class="btn btn-sm btn-outline-primary ver-tienda" data-lat="${tienda.latitud}" data-lng="${tienda.longitud}" data-id="${tienda.id}">
+                                <button class="btn btn-sm btn-outline-primary ver-tienda" data-lat="${tienda.latitud}" data-lng="${tienda.longitud}">
                                     Ver en mapa
                                 </button>
                             </div>
@@ -288,36 +252,17 @@
                     `;
                 });
                 
+                map.fitBounds(bounds, { padding: [50, 50] });
                 resultsContainer.innerHTML = resultsHTML;
-                
-                // Añadir eventos a los botones
-                document.querySelectorAll('.ver-tienda').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const lat = parseFloat(this.getAttribute('data-lat'));
-                        const lng = parseFloat(this.getAttribute('data-lng'));
-                        map.setView([lat, lng], 16);
-                        
-                        // Buscar y abrir el popup del marcador
-                        markers.forEach(marker => {
-                            const markerLatLng = marker.getLatLng();
-                            if (markerLatLng.lat === lat && markerLatLng.lng === lng) {
-                                marker.openPopup();
-                            }
-                        });
-                    });
-                });
+                addVerEnMapaListeners();
             })
             .catch(error => {
-                console.error('Error:', error);
-                resultsContainer.innerHTML = `
-                    <div class="text-center py-5">
-                        <p class="text-danger">Error al buscar tiendas cercanas. Inténtalo de nuevo.</p>
-                    </div>
-                `;
+                console.error('Error buscando tiendas cercanas:', error);
+                resultsContainer.innerHTML = `<div class="text-center py-5"><p class="text-danger">Error al buscar tiendas cercanas. Inténtalo de nuevo.</p></div>`;
             });
     }
     
-    // Buscar productos
+    // Buscar productos en tiendas cercanas
     function searchProducts() {
         const searchInput = document.getElementById('search-input');
         const radioSelect = document.getElementById('radio-select');
@@ -326,179 +271,117 @@
         const termino = searchInput.value.trim();
         const radio = radioSelect.value;
         
-        if (termino === '') {
-            return;
+        if (termino === '') return; // No buscar si no hay término
+        if (!userLocation) {
+             alert('Por favor, activa tu ubicación primero para buscar productos cercanos.');
+             getUserLocation(); // Intentar obtener ubicación
+             return;
         }
         
-        // Limpiar marcadores anteriores (excepto el del usuario)
         clearMarkers();
+        resultsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div><p class="mt-2">Buscando "${termino}" en un radio de ${radio} km...</p></div>`;
         
-        // Mostrar cargando
-        resultsContainer.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p class="mt-2">Buscando "${termino}"...</p>
-            </div>
-        `;
-        
-        // Si tenemos ubicación del usuario, buscar productos cercanos
-        if (userLocation) {
-            fetch(`/api/buscar/producto-cercano?termino=${encodeURIComponent(termino)}&lat=${userLocation.lat}&lng=${userLocation.lng}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        resultsContainer.innerHTML = `
-                            <div class="text-center py-5">
-                                <p class="text-muted">${data.error}</p>
-                            </div>
-                        `;
-                        return;
+        // Usar el nuevo endpoint
+        fetch(`/api/buscar/productos-en-radio?termino=${encodeURIComponent(termino)}&lat=${userLocation.lat}&lng=${userLocation.lng}&radio=${radio}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultsContainer.innerHTML = `<div class="text-center py-5"><p class="text-danger">${data.error}</p></div>`;
+                    return;
+                }
+                if (!data.resultados || data.resultados.length === 0) {
+                    resultsContainer.innerHTML = `<div class="text-center py-5"><p class="text-muted">No se encontraron tiendas con "${termino}" en un radio de ${radio} km.</p></div>`;
+                    // Centrar mapa en el usuario si no hay resultados
+                     if (userMarker) map.setView(userMarker.getLatLng(), 14);
+                    return;
+                }
+                
+                const bounds = L.latLngBounds();
+                 if (userMarker) bounds.extend(userMarker.getLatLng());
+                
+                let resultsHTML = `<h6 class="mb-3">Tiendas con "${termino}" (${data.total})</h6>`;
+                
+                data.resultados.forEach(resultado => {
+                    const tienda = resultado.tienda;
+                    const productos = resultado.productos;
+                    
+                    // Crear popup con info de tienda y productos/precios
+                    let popupContent = `<strong>${tienda.nombre}</strong><br>${tienda.direccion}<br><strong>Distancia:</strong> ${tienda.distancia} km<hr>`;
+                    if (productos && productos.length > 0) {
+                        popupContent += '<strong>Productos encontrados:</strong><ul>';
+                        productos.forEach(p => {
+                            popupContent += `<li>${p.nombre} - <span class="product-price">${p.precio.toFixed(2)} €</span></li>`;
+                        });
+                        popupContent += '</ul>';
+                    } else {
+                        popupContent += 'No se encontraron productos específicos.';
                     }
-                    
-                    // Mostrar tienda en el mapa
-                    const tienda = data.tienda;
-                    nearestStoreLocation = { lat: tienda.latitud, lng: tienda.longitud };
-                    const tiendaIcon = L.icon({
-                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34]
-                    });
-                    
-                    const marker = L.marker([tienda.latitud, tienda.longitud], {
-                        icon: tiendaIcon,
-                        title: tienda.nombre
-                    }).addTo(map);
-                    
-                    marker.bindPopup(`
-                        <strong>${tienda.nombre}</strong><br>
-                        ${tienda.direccion}<br>
-                        <strong>Distancia:</strong> ${tienda.distancia} km
-                    `);
-                    
+
+                    const marker = L.marker([tienda.latitud, tienda.longitud], { icon: tiendaIcon, title: tienda.nombre }).addTo(map);
+                    marker.bindPopup(popupContent);
                     markers.push(marker);
+                    bounds.extend([tienda.latitud, tienda.longitud]);
                     
-                    // Ajustar vista del mapa para mostrar usuario y tienda
-                    const bounds = L.latLngBounds(
-                        L.latLng(userLocation.lat, userLocation.lng),
-                        L.latLng(tienda.latitud, tienda.longitud)
-                    );
-                    map.fitBounds(bounds, { padding: [50, 50] });
-                    
-                    // Mostrar resultados
-                    let resultsHTML = `
-                        <div class="alert alert-success mb-3">
-                            <strong>¡Encontrado!</strong> Tienda más cercana con "${termino}"
-                        </div>
-                        
-                        <div class="card mb-4">
+                    // Añadir al panel de resultados
+                    resultsHTML += `
+                        <div class="card mb-3">
                             <div class="card-body">
-                                <h5 class="card-title">${tienda.nombre}</h5>
-                                <p class="card-text">
+                                <h6 class="card-title">${tienda.nombre}</h6>
+                                <p class="card-text small">
                                     <i class="fas fa-map-marker-alt me-2"></i>${tienda.direccion}<br>
                                     <i class="fas fa-route me-2"></i>Distancia: ${tienda.distancia} km
                                 </p>
-                            </div>
-                        </div>
-                        
-                        <h6 class="mb-3">Productos disponibles (${data.productos.length})</h6>
+                                <ul class="list-unstyled small mt-2">
                     `;
-                    
-                    // Mostrar productos
-                    data.productos.forEach(producto => {
-                        resultsHTML += `
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <h6 class="card-title">${producto.nombre}</h6>
-                                    <p class="card-text small">
-                                        ${producto.descripcion ? producto.descripcion.substring(0, 100) + (producto.descripcion.length > 100 ? '...' : '') : 'Sin descripción'}
-                                    </p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-primary fw-bold">${producto.precio.toFixed(2)} €</span>
-                                        <span class="badge bg-${producto.stock > 0 ? 'success' : 'danger'}">
-                                            ${producto.stock > 0 ? 'Disponible' : 'Agotado'}
-                                        </span>
-                                    </div>
-                                </div>
+                    if (productos && productos.length > 0) {
+                         productos.forEach(p => {
+                            resultsHTML += `<li>${p.nombre} - <span class="product-price">${p.precio.toFixed(2)} €</span></li>`;
+                        });
+                    } else {
+                         resultsHTML += '<li>No se encontraron productos específicos.</li>';
+                    }
+                    resultsHTML += `
+                                </ul>
+                                <button class="btn btn-sm btn-outline-primary ver-tienda" data-lat="${tienda.latitud}" data-lng="${tienda.longitud}">
+                                    Ver en mapa
+                                </button>
                             </div>
-                        `;
-                    });
-                    
-                    resultsContainer.innerHTML = resultsHTML;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    resultsContainer.innerHTML = `
-                        <div class="text-center py-5">
-                            <p class="text-danger">Error al buscar productos. Inténtalo de nuevo.</p>
                         </div>
                     `;
                 });
-        } else {
-            // Si no tenemos ubicación, mostrar mensaje
-            resultsContainer.innerHTML = `
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Para buscar productos cercanos, primero debes activar tu ubicación haciendo clic en el botón <i class="fas fa-map-marker-alt"></i>
-                </div>
                 
-                <div class="text-center py-4">
-                    <button class="btn btn-primary" id="activate-location">
-                        <i class="fas fa-map-marker-alt me-2"></i>Activar ubicación
-                    </button>
-                </div>
-            `;
-            
-            // Añadir evento al botón
-            document.getElementById('activate-location').addEventListener('click', getUserLocation);
-        }
+                map.fitBounds(bounds, { padding: [50, 50] });
+                resultsContainer.innerHTML = resultsHTML;
+                addVerEnMapaListeners();
+            })
+            .catch(error => {
+                console.error('Error buscando productos en radio:', error);
+                resultsContainer.innerHTML = `<div class="text-center py-5"><p class="text-danger">Error al buscar productos. Inténtalo de nuevo.</p></div>`;
+            });
     }
-    
-    // Limpiar marcadores
-    function clearMarkers() {
-        markers.forEach(marker => {
-            map.removeLayer(marker);
+
+    // Añadir listeners a los botones "Ver en mapa"
+    function addVerEnMapaListeners() {
+        document.querySelectorAll('.ver-tienda').forEach(button => {
+            button.addEventListener('click', function() {
+                const lat = parseFloat(this.getAttribute('data-lat'));
+                const lng = parseFloat(this.getAttribute('data-lng'));
+                map.setView([lat, lng], 16);
+                
+                // Buscar y abrir el popup del marcador correspondiente
+                markers.forEach(marker => {
+                    const markerLatLng = marker.getLatLng();
+                    if (markerLatLng.lat === lat && markerLatLng.lng === lng) {
+                        marker.openPopup();
+                    }
+                });
+            });
         });
-        markers = [];
     }
-    
-    
-    let routeControl = null;
-    let nearestStoreLocation = null;
 
-document.getElementById('route-button').addEventListener('click', function() {
-        if (!userLocation || !nearestStoreLocation) {
-            alert("Primero obtén tu ubicación y busca un producto.");
-            return;
-        }
-
-        if (routeControl) {
-            map.removeControl(routeControl);
-        }
-
-        routeControl = L.Routing.control({
-            waypoints: [
-                L.latLng(userLocation.lat, userLocation.lng),
-                L.latLng(nearestStoreLocation.lat, nearestStoreLocation.lng)
-            ],
-            routeWhileDragging: false,
-            addWaypoints: false,
-        language: 'es',
-            show: false,
-            createMarker: () => null
-
-        }).addTo(map);
-    });
-
-
-    // Inicializar cuando el documento esté listo
+    // Inicializar el mapa cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', initMap);
 
-
 </script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
-
 {% endblock %}
+
